@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # Database
-    DATABASE_URL: str
-    SYNC_DATABASE_URL: str
+    DATABASE_URL: str = "sqlite+aiosqlite:///./app.db"
+    SYNC_DATABASE_URL: str = "sqlite:///./app.db"
 
     # JWT
     SECRET_KEY: str
