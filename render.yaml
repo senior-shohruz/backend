@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        fromDatabase:
+          name: backend-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:3000
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+databases:
+  - name: backend-db
+    databaseName: backend_db
+    user: backend_user
+    plan: free

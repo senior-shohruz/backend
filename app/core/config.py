@@ -1,6 +1,7 @@
 """Application configuration using Pydantic Settings."""
 from functools import lru_cache
 from typing import List
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,9 +18,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
-    # Database
+    # Database — SYNC_DATABASE_URL is auto-derived if not set
     DATABASE_URL: str = "sqlite+aiosqlite:///./app.db"
-    SYNC_DATABASE_URL: str = "sqlite:///./app.db"
+    SYNC_DATABASE_URL: str = ""
 
     # JWT
     SECRET_KEY: str
@@ -38,9 +39,37 @@ class Settings(BaseSettings):
     FIRST_ADMIN_PASSWORD: str = "Admin123!"
     FIRST_ADMIN_USERNAME: str = "admin"
 
+    @model_validator(mode="after")
+    def configure_database_urls(self) -> "Settings":
+        url = self.DATABASE_URL
+
+        if not url.startswith("sqlite"):
+            # Render gives postgres:// — convert to postgresql://
+            if url.startswith("postgres://"):
+                url = "postgresql" + url[8:]
+
+            # Ensure async URL uses +asyncpg driver
+            if url.startswith("postgresql://"):
+                self.DATABASE_URL = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif url.startswith("postgresql+asyncpg://"):
+                self.DATABASE_URL = url
+
+        # Auto-derive sync URL if not explicitly set
+        if not self.SYNC_DATABASE_URL:
+            if self.DATABASE_URL.startswith("sqlite+aiosqlite://"):
+                self.SYNC_DATABASE_URL = self.DATABASE_URL.replace(
+                    "sqlite+aiosqlite://", "sqlite://", 1
+                )
+            else:
+                self.SYNC_DATABASE_URL = self.DATABASE_URL.replace(
+                    "postgresql+asyncpg://", "postgresql://", 1
+                )
+
+        return self
+
     @property
     def cors_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
 
 @lru_cache()

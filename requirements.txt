@@ -6,7 +6,6 @@ psycopg2-binary==2.9.10
 aiosqlite==0.20.0
 alembic==1.14.0
 pydantic==2.9.2
-pydantic-core==2.23.4
 pydantic-settings==2.6.0
 python-jose[cryptography]==3.3.0
 bcrypt==4.2.0
