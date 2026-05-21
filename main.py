@@ -1,17 +1,12 @@
-import anthropic
-from dotenv import load_dotenv
-load_dotenv()
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-client = anthropic.Anthropic()
-message = client.messages.create(
-    model="claude-3-5-sonnet-20241022",
-    max_tokens=1000,
-    temperature=0,
-    messages=[
-        {
-            "role": "user",
-            "content": "Hello, Claude",
-        }
-    ],
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-print(message.content)
