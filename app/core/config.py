@@ -1,6 +1,7 @@
 """Application configuration using Pydantic Settings."""
 from functools import lru_cache
 from typing import List
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,9 +18,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
-    # Database
+    # Database — only DATABASE_URL is required; SYNC_DATABASE_URL is auto-derived
     DATABASE_URL: str
-    SYNC_DATABASE_URL: str
+    SYNC_DATABASE_URL: str = ""
 
     # JWT
     SECRET_KEY: str
@@ -38,9 +39,30 @@ class Settings(BaseSettings):
     FIRST_ADMIN_PASSWORD: str = "Admin123!"
     FIRST_ADMIN_USERNAME: str = "admin"
 
+    @model_validator(mode="after")
+    def configure_database_urls(self) -> "Settings":
+        # Render gives postgres:// — SQLAlchemy needs postgresql://
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = "postgresql" + url[8:]
+
+        # Ensure async URL uses +asyncpg driver
+        if url.startswith("postgresql://"):
+            self.DATABASE_URL = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql+asyncpg://"):
+            self.DATABASE_URL = url
+
+        # Derive sync URL from async URL if not explicitly set
+        if not self.SYNC_DATABASE_URL:
+            self.SYNC_DATABASE_URL = self.DATABASE_URL.replace(
+                "postgresql+asyncpg://", "postgresql://", 1
+            )
+
+        return self
+
     @property
     def cors_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
 
 @lru_cache()
